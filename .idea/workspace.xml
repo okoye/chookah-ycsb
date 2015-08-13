@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="05251bea-c3a7-4cbc-b843-8c7d0f1fd949" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/workloads/elasticsearch" afterPath="$PROJECT_DIR$/workloads/elasticsearch" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bin/ycsb" afterPath="$PROJECT_DIR$/bin/ycsb" />
-    </list>
+    <list default="true" id="05251bea-c3a7-4cbc-b843-8c7d0f1fd949" name="Default" comment="" />
     <ignored path="ycsb.iws" />
     <ignored path=".idea/workspace.xml" />
     <ignored path="$PROJECT_DIR$/core/target/" />

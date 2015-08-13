@@ -129,7 +129,6 @@ target=400
 # Elasticsearch settings
 elasticsearch.remote=true
 elasticsearch.newdb=true
-elasticsearch.hosts.lost=localhost:9200
-#elasticsearch.hosts.list=search-haathi2-xhtxdq3v6di6rkc6r24vismfey.eu-west-1.es-staging.amazonaws.com:80
+elasticsearch.hosts.list=localhost:9200
 cluster.name=052121882672:haathi2
 node.local=false
