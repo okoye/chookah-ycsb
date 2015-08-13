@@ -102,6 +102,7 @@ LICENSE file.
     <module>distribution</module>
     <module>dynamodb</module>
     <module>elasticsearch</module>
+    <module>aelasticsearch</module>
     <module>gemfire</module>
     <module>hbase</module>
     <module>hypertable</module>
