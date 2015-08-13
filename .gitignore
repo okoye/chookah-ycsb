@@ -9,7 +9,7 @@ output*
 .classpath
 .settings
 .checkstyle
-.iml
-.xml
+**/*.iml
+**/*.swp
 
 .DS_Store
