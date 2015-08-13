@@ -44,7 +44,7 @@ operationcount=3000000
 
 # The number of insertions to do, if different from recordcount.
 # Used with insertstart to grow an existing table.
-#insertcount=
+insertcount=10000000
 
 # The offset of the first insertion
 insertstart=0
@@ -67,19 +67,19 @@ fieldlengthdistribution=constant
 #fieldlengthdistribution=zipfian
 
 # What proportion of operations are reads
-readproportion=0.95
+readproportion=0.05
 
 # What proportion of operations are updates
 updateproportion=0.05
 
 # What proportion of operations are inserts
-insertproportion=0
+insertproportion=0.90
 
 # What proportion of operations read then modify a record
 readmodifywriteproportion=0
 
 # What proportion of operations are scans
-scanproportion=0
+scanproportion=0.2
 
 # On a single scan, the maximum number of records to access
 maxscanlength=1000
@@ -93,8 +93,8 @@ insertorder=hashed
 #insertorder=ordered
 
 # The distribution of requests across the keyspace
-requestdistribution=zipfian
-#requestdistribution=uniform
+#requestdistribution=zipfian
+requestdistribution=uniform
 #requestdistribution=latest
 
 # Percentage of data items that constitute the hot set
@@ -113,18 +113,23 @@ table=usertable
 #columnfamily=
 
 # How the latency measurements are presented
-measurementtype=histogram
-#measurementtype=timeseries
+#measurementtype=histogram
+measurementtype=timeseries
 
 # The range of latencies to track in the histogram (milliseconds)
-histogram.buckets=1000
+histogram.buckets=10000
 
 # Granularity for time series (in milliseconds)
 timeseries.granularity=1000
 
+# Parallelism
+threadcount=40
+target=400
+
 # Elasticsearch settings
 elasticsearch.remote=true
 elasticsearch.newdb=true
-elasticsearch.hosts.list=search-haathi2-xhtxdq3v6di6rkc6r24vismfey.eu-west-1.es-staging.amazonaws.com:80
+elasticsearch.hosts.lost=localhost:9200
+#elasticsearch.hosts.list=search-haathi2-xhtxdq3v6di6rkc6r24vismfey.eu-west-1.es-staging.amazonaws.com:80
 cluster.name=052121882672:haathi2
 node.local=false
