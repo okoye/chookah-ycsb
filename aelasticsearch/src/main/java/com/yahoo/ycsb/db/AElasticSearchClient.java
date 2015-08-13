@@ -40,7 +40,7 @@ import java.util.Map.Entry;
 public class AElasticSearchClient extends DB {
 
     public static final String DEFAULT_CLUSTER_NAME = "aes.ycsb.cluster";
-    public static final String DEFAULT_INDEX_KEY = "es.ycsb";
+    public static final String DEFAULT_INDEX_KEY = "chookah.ycsb";
     public static final String DEFAULT_REMOTE_HOST = "localhost:9300";
     private static final String METHOD = "http://";
 

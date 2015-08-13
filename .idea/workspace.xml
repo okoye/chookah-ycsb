@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="05251bea-c3a7-4cbc-b843-8c7d0f1fd949" name="Default" comment="" />
+    <list default="true" id="05251bea-c3a7-4cbc-b843-8c7d0f1fd949" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/aelasticsearch/src/main/java/com/yahoo/ycsb/db/AElasticSearchClient.java" afterPath="$PROJECT_DIR$/aelasticsearch/src/main/java/com/yahoo/ycsb/db/AElasticSearchClient.java" />
+    </list>
     <ignored path="ycsb.iws" />
     <ignored path=".idea/workspace.xml" />
     <ignored path="$PROJECT_DIR$/core/target/" />
@@ -62,9 +64,11 @@
       <file leaf-file-name="AElasticSearchClient.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/aelasticsearch/src/main/java/com/yahoo/ycsb/db/AElasticSearchClient.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.5514706">
-              <caret line="22" column="60" selection-start-line="22" selection-start-column="60" selection-end-line="22" selection-end-column="60" />
-              <folding />
+            <state vertical-scroll-proportion="0.3033088">
+              <caret line="42" column="64" selection-start-line="42" selection-start-column="64" selection-end-line="42" selection-end-column="64" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -541,9 +545,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/aelasticsearch/src/main/java/com/yahoo/ycsb/db/AElasticSearchClient.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.5514706">
-          <caret line="22" column="60" selection-start-line="22" selection-start-column="60" selection-end-line="22" selection-end-column="60" />
-          <folding />
+        <state vertical-scroll-proportion="0.3033088">
+          <caret line="42" column="64" selection-start-line="42" selection-start-column="64" selection-end-line="42" selection-end-column="64" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
