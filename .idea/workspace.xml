@@ -2,10 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="05251bea-c3a7-4cbc-b843-8c7d0f1fd949" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pom.xml" afterPath="$PROJECT_DIR$/pom.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/distribution/pom.xml" afterPath="$PROJECT_DIR$/distribution/pom.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/elasticsearch/pom.xml" afterPath="$PROJECT_DIR$/elasticsearch/pom.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/aelasticsearch/src/main/java/com/yahoo/ycsb/db/AElasticSearchClient.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/aelasticsearch/README.md" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/aelasticsearch/aelasticsearch-binding.iml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/aelasticsearch/elasticsearch-binding.iml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/aelasticsearch/pom.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
     </list>
     <ignored path="ycsb.iws" />
     <ignored path=".idea/workspace.xml" />
