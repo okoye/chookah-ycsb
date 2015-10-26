@@ -99,6 +99,7 @@ LICENSE file.
     <module>aerospike</module>
     <module>cassandra</module>
     <module>couchbase</module>
+    <module>cloudsearch</module>
     <module>distribution</module>
     <module>dynamodb</module>
     <module>elasticsearch</module>
