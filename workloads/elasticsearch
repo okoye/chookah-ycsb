@@ -35,7 +35,7 @@ workload=com.yahoo.ycsb.workloads.CoreWorkload
 # The number of records in the table to be inserted in
 # the load phase or the number of records already in the 
 # table before the run phase.
-recordcount=100000000
+recordcount=10000000
 
 # There is no default setting for operationcount but it is
 # required to be set.
@@ -44,7 +44,7 @@ operationcount=3000000
 
 # The number of insertions to do, if different from recordcount.
 # Used with insertstart to grow an existing table.
-insertcount=10000000
+#insertcount=10000000
 
 # The offset of the first insertion
 insertstart=0
@@ -124,11 +124,10 @@ timeseries.granularity=1000
 
 # Parallelism
 threadcount=40
-target=400
+target=100
 
 # Elasticsearch settings
 elasticsearch.remote=true
 elasticsearch.newdb=true
-elasticsearch.hosts.list=localhost:9200
-cluster.name=052121882672:haathi2
+elasticsearch.hosts.list=doc-t2-lies-2-tdcajfnvuk26naeha4wns5geuq.us-east-1.es.a9.com:80
 node.local=false
