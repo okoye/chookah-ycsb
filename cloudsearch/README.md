@@ -47,4 +47,7 @@ The default setting for the CloudSearch node that is created is as follows:
     cloudsearch.debug=false
     cloudsearch.sockettimeout=20000 (in millisecs)
     cloudsearch.retrycount=0 (retries when 5XX errors occur)
-
+    cloudsearch.api=2011
+    aws.accesskey=foo
+    aws.secretkey=bar
+    aws.region=us-east-1

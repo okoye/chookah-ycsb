@@ -1,32 +1,36 @@
 package com.yahoo.ycsb.db;
 
-
-import java.util.Set;
-import java.util.Properties;
-
-
-import org.json.simple.JSONObject;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.AmazonWebServiceClient;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.ResponseMetadata;
+import com.amazonaws.retry.RetryPolicy;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.cloudsearchdomain.AmazonCloudSearchDomainClient;
+import com.amazonaws.services.cloudsearchdomain.model.SearchRequest;
+import com.amazonaws.services.cloudsearchdomain.model.SearchResult;
+import com.amazonaws.util.json.JSONObject;
+import com.amazonaws.util.json.JSONArray;
 
 import com.yahoo.ycsb.ByteIterator;
 import com.yahoo.ycsb.DB;
 import com.yahoo.ycsb.DBException;
 import com.yahoo.ycsb.StringByteIterator;
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.ResponseMetadata;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.retry.RetryPolicy;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.regions.Region;
-import com.amazonaws.AmazonWebServiceClient;
-import com.amazonaws.services.cloudsearchv2.AmazonCloudSearch;
-import com.amazonaws.services.cloudsearchv2.AmazonCloudSearchClient;
-import com.amazonaws.services.cloudsearchdomain.AmazonCloudSearchDomainClient;
-import com.amazonaws.services.cloudsearchdomain.model.SearchResult;
-import com.amazonaws.services.cloudsearchdomain.model.UploadDocumentsRequest;
-import com.amazonaws.services.cloudsearchdomain.model.SearchRequest;
+
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
+
+import java.nio.charset.Charset;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.HashMap;
+import java.util.Date;
+import java.util.Set;
 
 /**
  *	CloudSearch client for YCSB
@@ -35,50 +39,74 @@ import com.amazonaws.services.cloudsearchdomain.model.SearchRequest;
  */
 public class CloudSearchClient extends DB {
 
-    private AmazonCloudSearchDomainClient client = null; //Cloudsearch client
-    private AWSCredentials credentials = null;
+    private static final String TIMEOUT = "10000";
+    private static final String RETRY_COUNT = "0";
+    private static final String API = "2013";
+    private static final String DEFAULT_ACCESS_KEY = null;
+    private static final String DEFAULT_SECRET_KEY = null;
+    private static final String REGION = "us-east-1";
+    private static final ContentType CONTENT_TYPE = ContentType.create("application/json", Charset.forName("UTF-8"));
+    private static final String CLOUDSEARCH_2011_VERSION = "2011-02-01";
+    private static final String CLOUDSEARCH_2013_VERSION = "2013-01-01";
 
-    /**
-     * Initialize any state for this CloudSearch client instance.
-     * Called once per DB instance; there is one DB instance per client thread.
-     */
+    private AmazonCloudSearchDomainClient domainClient = null;
+    private AmazonWebServiceClient admin = null;
+    private Boolean debug;
+    private String searchEndpoint;
+    private String docEndpoint;
+    private String accessKey;
+    private String secretKey;
+    private String region;
+    private String batchURL;
+    private int timeout;
+    private int retryCount;
+    private int apiVersion;
+
     @Override
     public void init() throws DBException {
         Properties properties = getProperties();
-        ClientConfiguration clientConfiguration = new ClientConfiguration();
-        if (cloudSearchConfig.getSocketTimeout() >= 0) //use defaults otherwise
-            clientConfiguration.setSocketTimeout(cloudSearchConfig.getSocketTimeout());
-        if (cloudSearchConfig.getRetryCount() >= 0){ //use defaults otherwise
-            clientConfiguration.setMaxErrorRetry(cloudSearchConfig.getRetryCount());
-            clientConfiguration.setRetryPolicy(new RetryPolicy(null, null, cloudSearchConfig.getRetryCount(), true));
+        this.debug = Boolean.parseBoolean(properties.getProperty("cloudsearch.debug", "false"));
+        this.searchEndpoint = properties.getProperty("cloudsearch.search.endpoint");
+        this.docEndpoint = properties.getProperty("cloudsearch.doc.endpoint");
+        this.timeout = Integer.parseInt(properties.getProperty("cloudsearch.sockettimeout", TIMEOUT));
+        this.retryCount = Integer.parseInt(properties.getProperty("cloudsearch.retrycount", RETRY_COUNT));
+        this.apiVersion = Integer.parseInt(properties.getProperty("cloudsearch.api", API));
+        this.accessKey = properties.getProperty("aws.accesskey", DEFAULT_ACCESS_KEY);
+        this.secretKey = properties.getProperty("aws.secretkey", DEFAULT_SECRET_KEY);
+        this.region = properties.getProperty("aws.region", REGION);
+
+
+
+        ClientConfiguration config = new ClientConfiguration();
+        config.setSocketTimeout(this.timeout);
+        config.setMaxErrorRetry(this.retryCount);
+        config.setRetryPolicy(new RetryPolicy(null, null, this.retryCount, true));
+
+        if (haveCredentials())
+            domainClient = new AmazonCloudSearchDomainClient(getCredentials(), config);
+        else
+            domainClient = new AmazonCloudSearchDomainClient(config);
+
+        if (apiVersion == 2011){
+            admin = new com.amazonaws.services.cloudsearch.AmazonCloudSearchClient(getCredentials(), config);
+            this.batchURL = "http://" + docEndpoint + "/" + CLOUDSEARCH_2011_VERSION + "/documents/batch";
+        }
+        else {
+            admin = new com.amazonaws.services.cloudsearchv2.AmazonCloudSearchClient(getCredentials(), config);
+            this.batchURL = "http://" + docEndpoint + "/" + CLOUDSEARCH_2013_VERSION + "/documents/batch";
         }
 
-        if (haveCredentials()){ //otherwise assume creds in env vars
-            client = new AmazonCloudSearchDomainClient(credentials, clientConfiguration);
-        }
-        else{
-            client = new AmazonCloudSearchDomainClient(clientConfiguration);
-        }
-        client.setEndpoint(cloudSearchConfig.getSearchEndpoint());
-        client.setSignerRegionOverride(cloudSearchConfig.getRegion());
-    }
+        domainClient.setEndpoint(this.searchEndpoint);
+        admin.setEndpoint(this.searchEndpoint);
 
-    /**
-     * Are the necessary credentials available in our config file
-     * if yes, instantiate the credentials object.
-     * @return true if credentials were supplied in config file
-     */
-    private boolean haveCredentials(){
-        if (cloudSearchConfig.getAccessKeyId() != null && cloudSearchConfig.getSecretKeyId() != null){
-            credentials = new BasicAWSCredentials(cloudSearchConfig.getAccessKeyId(), cloudSearchConfig.getSecretKeyId());
-            return true;
-        }
-        return false;
+        domainClient.setSignerRegionOverride(this.region);
+        admin.setSignerRegionOverride(this.region);
     }
 
     @Override
     public void cleanup() throws DBException {
-        client.shutdown();
+        domainClient.shutdown();
+        admin.shutdown();
     }
 
     /**
@@ -94,8 +122,26 @@ public class CloudSearchClient extends DB {
      */
     @Override
     public int insert(String table, String key, HashMap<String, ByteIterator> values){
-
-        // TODO: implement this.
+        JSONObject doc = new JSONObject();
+        JSONObject fields = new JSONObject();
+        JSONArray batch = new JSONArray();
+        JSONObject response;
+        try{
+            for(Entry<String, String>entry : StringByteIterator.getStringMap(values).entrySet()){
+                fields.accumulate(entry.getKey(), entry.getValue());
+            }
+            doc.put("type", "add");
+            doc.put("id", key);
+            doc.put("lang", "en"); //not really english but should not matter.
+            doc.put("version", (int)(new Date().getTime() / 1000));
+            doc.put("fields", fields);
+            batch.put(doc);
+            response = post(batch);
+        }
+        catch (Exception ex){
+            ex.printStackTrace();
+            return 1;
+        }
         return 0;
     }
 
@@ -185,5 +231,31 @@ public class CloudSearchClient extends DB {
     @Override
     public int scan(String table, String startkey, int recordcount, Set<String> fields, Vector<HashMap<String, ByteIterator>> result) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Are the necessary credentials available in our config file
+     * if yes, instantiate the credentials object.
+     * @return true if credentials were supplied in config file
+     */
+    private boolean haveCredentials(){
+        return this.accessKey != null && this.secretKey != null;
+    }
+
+    private AWSCredentials getCredentials(){
+        return new BasicAWSCredentials(this.accessKey, this.secretKey);
+    }
+
+    private JSONObject post(JSONArray batch) throws Exception {
+        String sdf = batch.toString();
+        StringEntity entity = new StringEntity(sdf, CONTENT_TYPE);
+        HttpClient httpClient = new DefaultHttpClient();
+        HttpPost httpPost = new HttpPost(this.batchURL);
+        httpPost.setEntity(entity);
+
+        BasicResponseHandler responseHandler = new BasicResponseHandler();
+        String responseString = httpClient.execute(httpPost, responseHandler);
+        JSONObject response = new JSONObject(responseString);
+        return response;
     }
 }
