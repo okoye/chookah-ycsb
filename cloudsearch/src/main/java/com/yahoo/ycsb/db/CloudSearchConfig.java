@@ -5,13 +5,13 @@ import java.util.Properties;
 
 public class CloudSearchConfig extends PropertiesConfig{
 
-    public static final String SEARCH_ENDPOINT = "cloudsearch.searchEndpoint";
-    public static final String DOC_ENDPOINT = "cloudsearch.docEndpoint";
-    public static final String AWS_ACCESS_KEY_ID = "aws.accessKeyId";
-    public static final String AWS_SECRET_ACCESS_KEY = "aws.secretKey";
+    public static final String SEARCH_ENDPOINT = "cloudsearch.search.endpoint";
+    public static final String DOC_ENDPOINT = "cloudsearch.doc.endpoint";
+    public static final String AWS_ACCESS_KEY_ID = "aws.accesskey.id";
+    public static final String AWS_SECRET_ACCESS_KEY = "aws.secretkey.id";
     public static final String DEBUG = "cloudsearch.debug";
-    public static final String TIMEOUT = "cloudsearch.socketTimeout";
-    public static final String MAX_RETRY_COUNT = "cloudsearch.retryCount";
+    public static final String TIMEOUT = "cloudsearch.sockettimeout";
+    public static final String MAX_RETRY_COUNT = "cloudsearch.retrycount";
     public static final String REGION = "cloudsearch.region";
 
     public CloudSearchConfig(Properties properties){

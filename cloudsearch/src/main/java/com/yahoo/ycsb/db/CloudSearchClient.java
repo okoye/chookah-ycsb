@@ -1,18 +1,9 @@
 package com.yahoo.ycsb.db;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+
 import java.util.Set;
-import java.util.Vector;
-import java.util.Map.Entry;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
-import java.net.SocketTimeoutException;
+import java.util.Properties;
+
 
 import org.json.simple.JSONObject;
 
@@ -31,10 +22,8 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.regions.Region;
 import com.amazonaws.AmazonWebServiceClient;
 import com.amazonaws.services.cloudsearchv2.AmazonCloudSearch;
-import com.amazonaws.services.cloudsearchdomain.AmazonCloudSearchDomain;
 import com.amazonaws.services.cloudsearchv2.AmazonCloudSearchClient;
 import com.amazonaws.services.cloudsearchdomain.AmazonCloudSearchDomainClient;
-import com.amazonaws.services.cloudsearchdomain.model.QueryParser;
 import com.amazonaws.services.cloudsearchdomain.model.SearchResult;
 import com.amazonaws.services.cloudsearchdomain.model.UploadDocumentsRequest;
 import com.amazonaws.services.cloudsearchdomain.model.SearchRequest;
@@ -46,10 +35,33 @@ import com.amazonaws.services.cloudsearchdomain.model.SearchRequest;
  */
 public class CloudSearchClient extends DB {
 
-    private AmazonWebServiceClient searchClient = null; //Search client for search endpoint
-    private AmazonCloudSearchDomain docClient = null; //Doc client for doc endpoint
+    private AmazonCloudSearchDomainClient client = null; //Cloudsearch client
     private AWSCredentials credentials = null;
-    private CloudSearchConfig cloudSearchConfig = null;
+
+    /**
+     * Initialize any state for this CloudSearch client instance.
+     * Called once per DB instance; there is one DB instance per client thread.
+     */
+    @Override
+    public void init() throws DBException {
+        Properties properties = getProperties();
+        ClientConfiguration clientConfiguration = new ClientConfiguration();
+        if (cloudSearchConfig.getSocketTimeout() >= 0) //use defaults otherwise
+            clientConfiguration.setSocketTimeout(cloudSearchConfig.getSocketTimeout());
+        if (cloudSearchConfig.getRetryCount() >= 0){ //use defaults otherwise
+            clientConfiguration.setMaxErrorRetry(cloudSearchConfig.getRetryCount());
+            clientConfiguration.setRetryPolicy(new RetryPolicy(null, null, cloudSearchConfig.getRetryCount(), true));
+        }
+
+        if (haveCredentials()){ //otherwise assume creds in env vars
+            client = new AmazonCloudSearchDomainClient(credentials, clientConfiguration);
+        }
+        else{
+            client = new AmazonCloudSearchDomainClient(clientConfiguration);
+        }
+        client.setEndpoint(cloudSearchConfig.getSearchEndpoint());
+        client.setSignerRegionOverride(cloudSearchConfig.getRegion());
+    }
 
     /**
      * Are the necessary credentials available in our config file
@@ -61,39 +73,12 @@ public class CloudSearchClient extends DB {
             credentials = new BasicAWSCredentials(cloudSearchConfig.getAccessKeyId(), cloudSearchConfig.getSecretKeyId());
             return true;
         }
-        else{
-            return false;
-        }
-    }
-
-    /**
-     * Initialize any state for this CloudSearch client instance.
-     * Called once per DB instance; there is one DB instance per client thread.
-     */
-    @Override
-    public void init() throws DBException {
-        ClientConfiguration clientConfiguration = new ClientConfiguration();
-        cloudSearchConfig = new CloudSearchConfig(getProperties());
-        if (cloudSearchConfig.getSocketTimeout() >= 0) //use defaults otherwise
-            clientConfiguration.setSocketTimeout(cloudSearchConfig.getSocketTimeout());
-        if (cloudSearchConfig.getRetryCount() >= 0){ //use defaults otherwise
-            clientConfiguration.setMaxErrorRetry(cloudSearchConfig.getRetryCount());
-            clientConfiguration.setRetryPolicy(new RetryPolicy(null, null, cloudSearchConfig.getRetryCount(), true));
-        }
-
-        if (haveCredentials()){ //otherwise assume creds in env vars
-            searchClient = new AmazonCloudSearchDomainClient(credentials, clientConfiguration);
-        }
-        else{
-            searchClient = new AmazonCloudSearchDomainClient(clientConfiguration);
-        }
-        searchClient.setEndpoint(cloudSearchConfig.getSearchEndpoint());
-        searchClient.setSignerRegionOverride(cloudSearchConfig.getRegion());
+        return false;
     }
 
     @Override
     public void cleanup() throws DBException {
-        searchClient.shutdown();
+        client.shutdown();
     }
 
     /**
@@ -109,6 +94,8 @@ public class CloudSearchClient extends DB {
      */
     @Override
     public int insert(String table, String key, HashMap<String, ByteIterator> values){
+
+        // TODO: implement this.
         return 0;
     }
 
@@ -149,7 +136,7 @@ public class CloudSearchClient extends DB {
         try{
             String query = "mariecurie";
             searchRequest.setQuery(query);
-            searchResult = ((AmazonCloudSearchDomainClient)searchClient).search(searchRequest);
+            searchResult = ((AmazonCloudSearchDomainClient)client).search(searchRequest);
             if (searchResult.getHits().getFound() < 1){
                 throw new Exception("Error! Unexpected no of hits found!");
             }
