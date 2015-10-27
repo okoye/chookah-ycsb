@@ -136,7 +136,7 @@ public class CloudSearchClient extends DB {
             doc.put("version", (int)(new Date().getTime() / 1000));
             doc.put("fields", fields);
             batch.put(doc);
-            response = post(batch);
+            post(batch);
         }
         catch (Exception ex){
             ex.printStackTrace();
@@ -246,7 +246,19 @@ public class CloudSearchClient extends DB {
         return new BasicAWSCredentials(this.accessKey, this.secretKey);
     }
 
-    private JSONObject post(JSONArray batch) throws Exception {
+
+    private void post(JSONArray batch) throws Exception {
+        if (this.apiVersion == 2011)
+            post2011(batch);
+        else
+            post2013(batch);
+    }
+
+    private void post2013(JSONArray batch) throws Exception {
+        //pass
+    }
+
+    private JSONObject post2011(JSONArray batch) throws Exception {
         String sdf = batch.toString();
         StringEntity entity = new StringEntity(sdf, CONTENT_TYPE);
         HttpClient httpClient = new DefaultHttpClient();
