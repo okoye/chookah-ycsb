@@ -1,15 +1,12 @@
 package com.yahoo.ycsb.db;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.AmazonWebServiceClient;
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.ResponseMetadata;
 import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.cloudsearchdomain.AmazonCloudSearchDomainClient;
-import com.amazonaws.services.cloudsearchdomain.model.SearchRequest;
-import com.amazonaws.services.cloudsearchdomain.model.SearchResult;
+
 import com.amazonaws.util.json.JSONObject;
 import com.amazonaws.util.json.JSONArray;
 
@@ -18,19 +15,25 @@ import com.yahoo.ycsb.DB;
 import com.yahoo.ycsb.DBException;
 import com.yahoo.ycsb.StringByteIterator;
 
+import org.apache.http.StatusLine;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EntityUtils;
 
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.net.URI;
 import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.HashMap;
-import java.util.Date;
-import java.util.Set;
 
 /**
  *	CloudSearch client for YCSB
@@ -130,6 +133,7 @@ public class CloudSearchClient extends DB {
             for(Entry<String, String>entry : StringByteIterator.getStringMap(values).entrySet()){
                 fields.accumulate(entry.getKey(), entry.getValue());
             }
+            fields.accumulate("table", table); //Simulation of a table
             doc.put("type", "add");
             doc.put("id", key);
             doc.put("lang", "en"); //not really english but should not matter.
@@ -155,49 +159,20 @@ public class CloudSearchClient extends DB {
      */
     @Override
     public int delete(String table, String key) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Read a record from CloudSearch. We only use the table name and key when
-     * conducting search queries.
-     *
-     * @param table The name of the table
-     * @param key The record key of the record to read.
-     * @param fields The list of fields to read, or null for all of them
-     * @param result A HashMap of field/value pairs for the result
-     * @return Zero on success, a non-zero error code on error or "not found".
-     */
-    @Override
-    public int read(String table, String key, Set<String> fields, HashMap<String, ByteIterator> result){
-        //All read should do is simple conduct a search and see if it is successful or not.
-        //If successful code, return 0, otherwise return 1.
-
-        //First, build a SearchRequest object
-        SearchResult searchResult;
-        SearchRequest searchRequest = new SearchRequest();
-        ResponseMetadata response;
-        boolean errors = false;
-
+        JSONArray batch = new JSONArray();
+        JSONObject doc = new JSONObject();
         try{
-            String query = "mariecurie";
-            searchRequest.setQuery(query);
-            searchResult = ((AmazonCloudSearchDomainClient)client).search(searchRequest);
-            if (searchResult.getHits().getFound() < 1){
-                throw new Exception("Error! Unexpected no of hits found!");
-            }
-        }
-        catch(AmazonServiceException ase){
-            System.err.println("Experiencing problems with the service");
-            errors = true;
-            throw ase;
+            doc.put("type", "delete");
+            doc.put("id", key);
+            doc.put("version", (int)(new Date().getTime() / 1000));
+            batch.put(doc);
+            post(batch);
         }
         catch(Exception ex){
-            System.err.println("An unknown error occured when searching/reading results from cloudsearch "+ex.toString());
             ex.printStackTrace();
-            errors = true;
+            return 1;
         }
-        return errors == false ? 0 : 1;
+        return 0;
     }
 
     /**
@@ -230,7 +205,38 @@ public class CloudSearchClient extends DB {
      */
     @Override
     public int scan(String table, String startkey, int recordcount, Set<String> fields, Vector<HashMap<String, ByteIterator>> result) {
-        throw new UnsupportedOperationException();
+        try {
+            String response = search(table);
+            JSONObject jsonResponse = new JSONObject(response);
+            //TODO: We need to iterate over results.
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+            return 1;
+        }
+        return 0;
+    }
+
+    /**
+     * Read a record from the database. Each field/value pair will be stored in a Hashmap
+     * @param table The name of the table
+     * @param key The record key of the record to read
+     * @param fields The list of fields to read, or null for all of them
+     * @param result A HashMap of field/value pairs for the result
+     */
+    @Override
+    public int read(String table, String key, Set<String> fields, HashMap<String, ByteIterator> result){
+        try {
+            String response = search(key);
+            JSONObject jsonResponse = new JSONObject(response);
+            // TODO: Need to assert only 1 record is returned.
+
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+            return 1;
+        }
+        return 0;
     }
 
     /**
@@ -269,5 +275,31 @@ public class CloudSearchClient extends DB {
         String responseString = httpClient.execute(httpPost, responseHandler);
         JSONObject response = new JSONObject(responseString);
         return response;
+    }
+
+    private String search(String query) throws Exception {
+        URIBuilder builder = new URIBuilder();
+        URI uri;
+        HttpRequestBase httpRequest;
+        HttpClient httpClient;
+        HttpResponse response;
+        StatusLine statusLine;
+
+        builder.addParameter("q", query);
+        uri = builder.setScheme("http").setHost(this.searchEndpoint).build();
+        httpRequest = new HttpGet(uri);
+
+        if (debug){
+            System.err.println("Fetching:"
+                + URLDecoder.decode(uri.toASCIIString(),
+                    StandardCharsets.UTF_8.toString()));
+        }
+        httpClient = new DefaultHttpClient();
+        response = httpClient.execute(httpRequest);
+        statusLine = response.getStatusLine();
+        if (statusLine.getStatusCode() != 200){
+            throw new Exception("Search request failed with code " + statusLine.getStatusCode() + " and URI "+uri);
+        }
+        return EntityUtils.toString(response.getEntity());
     }
 }
