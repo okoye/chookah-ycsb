@@ -26,6 +26,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 
 import java.net.URLDecoder;
@@ -252,22 +253,10 @@ public class CloudSearchClient extends DB {
         return new BasicAWSCredentials(this.accessKey, this.secretKey);
     }
 
-
-    private void post(JSONArray batch) throws Exception {
-        if (this.apiVersion == 2011)
-            post2011(batch);
-        else
-            post2013(batch);
-    }
-
-    private void post2013(JSONArray batch) throws Exception {
-        //pass
-    }
-
-    private JSONObject post2011(JSONArray batch) throws Exception {
+    private JSONObject post(JSONArray batch) throws Exception {
         String sdf = batch.toString();
         StringEntity entity = new StringEntity(sdf, CONTENT_TYPE);
-        HttpClient httpClient = new DefaultHttpClient();
+        HttpClient httpClient = HttpClientBuilder.create().disableAutomaticRetries().build();
         HttpPost httpPost = new HttpPost(this.batchURL);
         httpPost.setEntity(entity);
 
@@ -294,7 +283,7 @@ public class CloudSearchClient extends DB {
                 + URLDecoder.decode(uri.toASCIIString(),
                     StandardCharsets.UTF_8.toString()));
         }
-        httpClient = new DefaultHttpClient();
+        httpClient = HttpClientBuilder.create().disableAutomaticRetries().build();
         response = httpClient.execute(httpRequest);
         statusLine = response.getStatusLine();
         if (statusLine.getStatusCode() != 200){
