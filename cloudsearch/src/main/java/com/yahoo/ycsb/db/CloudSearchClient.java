@@ -105,6 +105,10 @@ public class CloudSearchClient extends DB {
 
         domainClient.setSignerRegionOverride(this.region);
         admin.setSignerRegionOverride(this.region);
+
+        if (debug){
+            System.err.println("Succesfully initialized CloudSearch driver state for Thread "+Thread.currentThread().getId());
+        }
     }
 
     @Override
