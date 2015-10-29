@@ -65,6 +65,7 @@ public class CloudSearchClient extends DB {
     private int timeout;
     private int retryCount;
     private int apiVersion;
+    private int fieldNumber;
 
     @Override
     public void init() throws DBException {
@@ -78,6 +79,7 @@ public class CloudSearchClient extends DB {
         this.accessKey = properties.getProperty("aws.accesskey", DEFAULT_ACCESS_KEY);
         this.secretKey = properties.getProperty("aws.secretkey", DEFAULT_SECRET_KEY);
         this.region = properties.getProperty("aws.region", REGION);
+        this.fieldNumber = Integer.parseInt(properties.getProperty("fieldcount"));
 
 
 
@@ -151,6 +153,10 @@ public class CloudSearchClient extends DB {
             doc.put("version", (int)(new Date().getTime() / 1000));
             doc.put("fields", fields);
             batch.put(doc);
+
+            if (debug)
+                System.err.println("Document to be submitted " + batch.toString(2));
+
             post(batch);
         }
         catch (Exception ex){
@@ -175,7 +181,7 @@ public class CloudSearchClient extends DB {
         try{
             doc.put("type", "delete");
             doc.put("id", key);
-            doc.put("version", (int)(new Date().getTime() / 1000));
+            doc.put("version", (int) (new Date().getTime() / 1000));
             batch.put(doc);
             post(batch);
         }
@@ -217,7 +223,7 @@ public class CloudSearchClient extends DB {
     @Override
     public int scan(String table, String startkey, int recordcount, Set<String> fields, Vector<HashMap<String, ByteIterator>> result) {
         try {
-            String response = search(table);
+            String response = search(table, constructFields());
             JSONObject jsonResponse = new JSONObject(response);
             //TODO: We need to iterate over results.
         }
@@ -239,7 +245,7 @@ public class CloudSearchClient extends DB {
     @Override
     public int read(String table, String key, Set<String> fields, HashMap<String, ByteIterator> result){
         try {
-            String response = search(key);
+            String response = search(key, constructFields());
             System.err.println(response);
             //JSONObject jsonResponse = new JSONObject(response);
             // TODO: Need to assert only 1 record is returned.
@@ -251,11 +257,16 @@ public class CloudSearchClient extends DB {
         return 0;
     }
 
-    /**
-     * Are the necessary credentials available in our config file
-     * if yes, instantiate the credentials object.
-     * @return true if credentials were supplied in config file
-     */
+    private String constructFields() throws Exception {
+        JSONObject doc = new JSONObject();
+        JSONArray searchableFields = new JSONArray();
+
+        for (int i=0; i<fieldNumber; i++)
+            searchableFields.put("field"+i);
+        doc.put("fields", searchableFields);
+        return doc.toString();
+    }
+    
     private boolean haveCredentials(){
         return this.accessKey != null && this.secretKey != null;
     }
@@ -281,9 +292,19 @@ public class CloudSearchClient extends DB {
         if (this.apiVersion == 2011)
             return search2011(query);
         else if (this.apiVersion == 2013)
-            return search2013(query);
+            return search2013(query, null);
         else
             throw new Exception("Unsupported CloudSearch version specified");
+    }
+
+    private String search(String query, String fields) throws Exception {
+        if (this.apiVersion != 2013){
+            System.err.println("Silently ignoring fields parameter");
+            return search2011(query);
+        }
+        else{
+            return search2013(query, fields);
+        }
     }
 
     private String search2011(String query) throws Exception {
@@ -312,11 +333,16 @@ public class CloudSearchClient extends DB {
         return EntityUtils.toString(response.getEntity());
     }
 
-    private String search2013(String query) throws Exception {
+    private String search2013(String query, String fields) throws Exception {
         SearchResult searchResult;
         SearchRequest searchRequest = new SearchRequest();
 
+        if (fields != null){
+            searchRequest.setQueryOptions(fields);
+        }
         searchRequest.setQuery(query);
+        if (debug)
+            System.err.println("Sending query "+fields);
         searchResult = domainClient.search(searchRequest);
         if (searchResult.getHits().getFound() < 1)
             throw new Exception("Error, no documents were retrieved in query");
