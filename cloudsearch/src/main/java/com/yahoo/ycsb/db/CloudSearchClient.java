@@ -6,7 +6,8 @@ import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.cloudsearchdomain.AmazonCloudSearchDomainClient;
-
+import com.amazonaws.services.cloudsearchdomain.model.SearchRequest;
+import com.amazonaws.services.cloudsearchdomain.model.SearchResult;
 import com.amazonaws.util.json.JSONObject;
 import com.amazonaws.util.json.JSONArray;
 
@@ -25,7 +26,6 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 
@@ -46,8 +46,8 @@ public class CloudSearchClient extends DB {
     private static final String TIMEOUT = "10000";
     private static final String RETRY_COUNT = "0";
     private static final String API = "2013";
-    private static final String DEFAULT_ACCESS_KEY = null;
-    private static final String DEFAULT_SECRET_KEY = null;
+    private static final String DEFAULT_ACCESS_KEY = "";
+    private static final String DEFAULT_SECRET_KEY = "";
     private static final String REGION = "us-east-1";
     private static final ContentType CONTENT_TYPE = ContentType.create("application/json", Charset.forName("UTF-8"));
     private static final String CLOUDSEARCH_2011_VERSION = "2011-02-01";
@@ -92,11 +92,17 @@ public class CloudSearchClient extends DB {
             domainClient = new AmazonCloudSearchDomainClient(config);
 
         if (apiVersion == 2011){
-            admin = new com.amazonaws.services.cloudsearch.AmazonCloudSearchClient(getCredentials(), config);
+            if (haveCredentials())
+                admin = new com.amazonaws.services.cloudsearch.AmazonCloudSearchClient(getCredentials(), config);
+            else
+                admin = new com.amazonaws.services.cloudsearch.AmazonCloudSearchClient(config);
             this.batchURL = "http://" + docEndpoint + "/" + CLOUDSEARCH_2011_VERSION + "/documents/batch";
         }
         else {
-            admin = new com.amazonaws.services.cloudsearchv2.AmazonCloudSearchClient(getCredentials(), config);
+            if (haveCredentials())
+                admin = new com.amazonaws.services.cloudsearchv2.AmazonCloudSearchClient(getCredentials(), config);
+            else
+                admin = new com.amazonaws.services.cloudsearchv2.AmazonCloudSearchClient(config);
             this.batchURL = "http://" + docEndpoint + "/" + CLOUDSEARCH_2013_VERSION + "/documents/batch";
         }
 
@@ -224,6 +230,7 @@ public class CloudSearchClient extends DB {
 
     /**
      * Read a record from the database. Each field/value pair will be stored in a Hashmap
+     *
      * @param table The name of the table
      * @param key The record key of the record to read
      * @param fields The list of fields to read, or null for all of them
@@ -233,9 +240,9 @@ public class CloudSearchClient extends DB {
     public int read(String table, String key, Set<String> fields, HashMap<String, ByteIterator> result){
         try {
             String response = search(key);
-            JSONObject jsonResponse = new JSONObject(response);
+            System.err.println(response);
+            //JSONObject jsonResponse = new JSONObject(response);
             // TODO: Need to assert only 1 record is returned.
-
         }
         catch (Exception ex) {
             ex.printStackTrace();
@@ -271,6 +278,15 @@ public class CloudSearchClient extends DB {
     }
 
     private String search(String query) throws Exception {
+        if (this.apiVersion == 2011)
+            return search2011(query);
+        else if (this.apiVersion == 2013)
+            return search2013(query);
+        else
+            throw new Exception("Unsupported CloudSearch version specified");
+    }
+
+    private String search2011(String query) throws Exception {
         URIBuilder builder = new URIBuilder();
         URI uri;
         HttpRequestBase httpRequest;
@@ -294,5 +310,17 @@ public class CloudSearchClient extends DB {
             throw new Exception("Search request failed with code " + statusLine.getStatusCode() + " and URI "+uri);
         }
         return EntityUtils.toString(response.getEntity());
+    }
+
+    private String search2013(String query) throws Exception {
+        SearchResult searchResult;
+        SearchRequest searchRequest = new SearchRequest();
+
+        searchRequest.setQuery(query);
+        searchResult = domainClient.search(searchRequest);
+        if (searchResult.getHits().getFound() < 1)
+            throw new Exception("Error, no documents were retrieved in query");
+
+        return searchResult.toString();
     }
 }
